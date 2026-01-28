@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGameStore } from '../../src/stores/gameStore';
 
 type Game = {
   id: string;
@@ -9,8 +10,8 @@ type Game = {
   description: string;
   icon: string;
   xpReward: number;
-  playsToday: number;
   maxPlaysPerDay: number;
+  available: boolean;
 };
 
 const GAMES: Game[] = [
@@ -20,8 +21,8 @@ const GAMES: Game[] = [
     description: 'Test your knowledge with rapid-fire questions',
     icon: 'help-circle',
     xpReward: 30,
-    playsToday: 0,
     maxPlaysPerDay: 3,
+    available: true,
   },
   {
     id: 'trading-sim',
@@ -29,8 +30,8 @@ const GAMES: Game[] = [
     description: 'Practice trading with fake tokens',
     icon: 'trending-up',
     xpReward: 20,
-    playsToday: 0,
     maxPlaysPerDay: 5,
+    available: false,
   },
   {
     id: 'crypto-2048',
@@ -38,16 +39,17 @@ const GAMES: Game[] = [
     description: 'Merge tokens to reach the moon!',
     icon: 'grid',
     xpReward: 15,
-    playsToday: 0,
     maxPlaysPerDay: 10,
+    available: false,
   },
 ];
 
 export default function PlayScreen() {
   const router = useRouter();
+  const { getTodayPlays, getHighScore } = useGameStore();
 
   const handleGamePress = (gameId: string) => {
-    router.push(`/game/${gameId}`);
+    router.push(`/game/${gameId}` as any);
   };
 
   return (
@@ -62,11 +64,13 @@ export default function PlayScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
-          const canPlay = item.playsToday < item.maxPlaysPerDay;
+          const playsToday = getTodayPlays(item.id);
+          const canPlay = item.available && playsToday < item.maxPlaysPerDay;
+          const highScore = getHighScore(item.id);
 
           return (
             <Pressable
-              style={[styles.gameCard, !canPlay && styles.gameCardDisabled]}
+              style={[styles.gameCard, (!canPlay || !item.available) && styles.gameCardDisabled]}
               onPress={() => canPlay && handleGamePress(item.id)}
               disabled={!canPlay}
             >
@@ -80,6 +84,7 @@ export default function PlayScreen() {
               <View style={styles.gameInfo}>
                 <Text style={[styles.gameName, !canPlay && styles.textDisabled]}>
                   {item.name}
+                  {!item.available && ' (Coming Soon)'}
                 </Text>
                 <Text style={[styles.gameDesc, !canPlay && styles.textDisabled]}>
                   {item.description}
@@ -89,13 +94,23 @@ export default function PlayScreen() {
                     <Ionicons name="star" size={12} color="#ffd700" />
                     <Text style={styles.statText}>+{item.xpReward} XP</Text>
                   </View>
-                  <Text style={styles.playsText}>
-                    {item.playsToday}/{item.maxPlaysPerDay} plays today
-                  </Text>
+                  {item.available ? (
+                    <Text style={styles.playsText}>
+                      {playsToday}/{item.maxPlaysPerDay} plays today
+                    </Text>
+                  ) : (
+                    <Text style={styles.playsText}>Locked</Text>
+                  )}
+                  {highScore > 0 && (
+                    <View style={styles.highScoreBadge}>
+                      <Ionicons name="trophy" size={12} color="#ffd700" />
+                      <Text style={styles.highScoreText}>{highScore}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
               <Ionicons
-                name="chevron-forward"
+                name={item.available ? "chevron-forward" : "lock-closed"}
                 size={24}
                 color={canPlay ? '#8b8b8b' : '#444'}
               />
@@ -191,5 +206,19 @@ const styles = StyleSheet.create({
   playsText: {
     fontSize: 12,
     color: '#8b8b8b',
+  },
+  highScoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  highScoreText: {
+    fontSize: 12,
+    color: '#ffd700',
+    fontWeight: '600',
   },
 });

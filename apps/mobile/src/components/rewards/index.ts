@@ -1,0 +1,1 @@
+export { BadgeUnlocked } from './BadgeUnlocked';

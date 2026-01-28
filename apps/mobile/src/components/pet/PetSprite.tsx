@@ -9,7 +9,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
-import type { PetMood, PetType } from '@/stores/petStore';
+import type { PetMood, PetType } from '../../stores/petStore';
 
 interface PetSpriteProps {
   mood: PetMood;
